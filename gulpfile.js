@@ -11,6 +11,7 @@ var gutil = require('gulp-util'); // Utilities for Gulp like logging
 var browserify = require('browserify'); // Turning nodeJS into browser compatible JS
 var source = require('vinyl-source-stream'); // Allows to use normal text streams
 var babelify = require('babelify'); // Transpiler
+var htmlPages = ['src/*.html'];
 
 // External dependencies that don't need to be rebundled while developing
 // They'll be bundled once and for all in 'vendor.js'
@@ -27,27 +28,42 @@ var scriptsCount = 0;
 gulp.task('scripts', function () {
   bundleApp(false);
 });
-// Deployment task - Bundle everything into one script
+// Copy HTML page in separate task to avoid recompiling JS
+// TODO CSS pages
+gulp.task('copy-html', function () {
+  gulp.src(htmlPages)
+    .pipe(gulp.dest('dev'));
+});
+// Deployment task - Bundle everything into one script and copy HTML pages
+// Destination directory: ./dist
 gulp.task('deploy', function () {
+  gulp.src(htmlPages)
+    .pipe(gulp.dest('dist'));
   bundleApp(true);
 });
+
 // Watch task - Reruns scripts task everytime something changes
+// Destination directory: dist
 gulp.task('watch', function () {
-  gulp.watch(['./app/*.js'], ['scripts']);
+  gulp.watch(['./src/*.js'], ['scripts']);
+  gulp.watch(['./src/*.html'], ['copy-html']);
 });
 
 // Default task - Called by 'gulp' on terminal
 // Runs the task 'scripts' and then keeps watch for changes in every .js file
-gulp.task('default', ['scripts', 'watch']);
+gulp.task('default', ['scripts', 'copy-html', 'watch']);
 
 // Private Functions
 // ----------------------------------------------------------------------------
 function bundleApp(isProduction) {
   scriptsCount++;
+  // Root directory for the compiled files
+  // In production, copies the full devsite structure into dist.
+  var rootDir;
   // Use browserify to bundle all the js files together to use them in the
   // front end
   var appBundler = browserify({
-    entries: './app/app.js',
+    entries: './src/app.js',
     debug: !isProduction // We don't want the maps in production
   });
 
@@ -62,9 +78,16 @@ function bundleApp(isProduction) {
       .bundle()
       .on('error', gutil.log)
       .pipe(source('vendors.js'))
-      .pipe(gulp.dest('./web/js/'));
+      .pipe(gulp.dest('./dev/web/js/'));
   }
-  if (!isProduction) {
+  if (isProduction) {
+    rootDir = './dist';
+    // Copy all the HTML files there to ease copying
+
+  }
+  else
+  {
+    rootDir = './dev';
     // Make the dependencies external to avoid bundling in bundle.js
     // Dependencies are bundled in vendor.js in development
     dependencies.forEach(function (dep) {
@@ -78,5 +101,5 @@ function bundleApp(isProduction) {
     .bundle()
     .on('error', gutil.log)
     .pipe(source('bundle.js'))
-    .pipe(gulp.dest('./web/js/'));
+    .pipe(gulp.dest(rootDir + '/web/js/'));
 }
