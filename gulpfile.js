@@ -43,7 +43,7 @@ gulp.task('default', ['scripts', 'watch']);
 // Private Functions
 // ----------------------------------------------------------------------------
 function bundleApp(isProduction) {
-  scriptCount++;
+  scriptsCount++;
   // Use browserify to bundle all the js files together to use them in the
   // front end
   var appBundler = browserify({
