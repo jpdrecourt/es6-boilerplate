@@ -11,7 +11,8 @@ var gutil = require('gulp-util'); // Utilities for Gulp like logging
 var browserify = require('browserify'); // Turning nodeJS into browser compatible JS
 var source = require('vinyl-source-stream'); // Allows to use normal text streams
 var babelify = require('babelify'); // Transpiler
-var htmlPages = ['src/*.html'];
+var webserver = require('gulp-webserver'); // Webserver with LiveReaload
+var htmlPages = ['src/*.html']; // HTML pages to watch
 
 // External dependencies that don't need to be rebundled while developing
 // They'll be bundled once and for all in 'vendor.js'
@@ -34,6 +35,14 @@ gulp.task('copy-html', function () {
   gulp.src(htmlPages)
     .pipe(gulp.dest('dev'));
 });
+// Webserver task for Development
+gulp.task('webserver', function () {
+  gulp.src('./dev/')
+    .pipe(webserver({
+        livereload: true,
+        open: true
+    }));
+});
 // Deployment task - Bundle everything into one script and copy HTML pages
 // Destination directory: ./dist
 gulp.task('deploy', function () {
@@ -49,9 +58,8 @@ gulp.task('watch', function () {
   gulp.watch(['./src/*.html'], ['copy-html']);
 });
 
-// Default task - Called by 'gulp' on terminal
-// Runs the task 'scripts' and then keeps watch for changes in every .js file
-gulp.task('default', ['scripts', 'copy-html', 'watch']);
+// Default task for development - Called by 'gulp' on terminal
+gulp.task('default', ['scripts', 'copy-html', 'webserver', 'watch']);
 
 // Private Functions
 // ----------------------------------------------------------------------------
