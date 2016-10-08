@@ -6,20 +6,24 @@
 
 // Declarations & dependencies
 // ----------------------------------------------------------------------------
+var fs = require('fs'); // To read local files
 var gulp = require('gulp'); // Task Automation
 var gutil = require('gulp-util'); // Utilities for Gulp like logging
 var browserify = require('browserify'); // Turning nodeJS into browser compatible JS
 var source = require('vinyl-source-stream'); // Allows to use normal text streams
 var babelify = require('babelify'); // Transpiler
 var webserver = require('gulp-webserver'); // Webserver with LiveReaload
+var sass = require('gulp-sass'); // SASS compiler
+var prefix = require('gulp-autoprefixer'); // Browser compatibility
 var htmlPages = ['src/*.html']; // HTML pages to watch
+var scssPages = ['src/*.scss']; // CSS pages to watch
 
 // External dependencies that don't need to be rebundled while developing
 // They'll be bundled once and for all in 'vendor.js'
 // In production, they'll be included in 'bundle.js'
-var dependencies = [
-
-];
+// Extracted directly from package.json for simplicity.
+var packageData = JSON.parse(fs.readFileSync('./package.json'));
+var dependencies = Object.getOwnPropertyNames(packageData.dependencies);
 // Count of the times a tasks refires (with gulp.watch)
 var scriptsCount = 0;
 
@@ -30,11 +34,22 @@ gulp.task('scripts', function () {
   bundleApp(false);
 });
 // Copy HTML page in separate task to avoid recompiling JS
-// TODO CSS pages
 gulp.task('copy-html', function () {
   gulp.src(htmlPages)
     .pipe(gulp.dest('dev'));
 });
+// SASS, CSS and prefix
+gulp.task('sass', function () {
+  return gulp.src(scssPages)
+    .pipe(sass({
+      indentedSyntax: true
+    }).on('error', sass.logError))
+    .pipe(prefix({
+      browsers: ['last 15 versions', '> 1%', 'ie 8', 'ie 7'],
+      cascade: true }))
+    .pipe(gulp.dest('dev/web/css'));
+});
+
 // Webserver task for Development
 gulp.task('webserver', function () {
   gulp.src('./dev/')
@@ -45,9 +60,18 @@ gulp.task('webserver', function () {
 });
 // Deployment task - Bundle everything into one script and copy HTML pages
 // Destination directory: ./dist
+// TODO: DRY this out
 gulp.task('deploy', function () {
   gulp.src(htmlPages)
     .pipe(gulp.dest('dist'));
+  gulp.src(scssPages)
+    .pipe(sass({
+      indentedSyntax: true
+    }).on('error', sass.logError))
+    .pipe(prefix({
+      browsers: ['last 15 versions', '> 1%', 'ie 8', 'ie 7'],
+      cascade: true }))
+    .pipe(gulp.dest('dist/web/css'));
   bundleApp(true);
 });
 
@@ -56,10 +80,11 @@ gulp.task('deploy', function () {
 gulp.task('watch', function () {
   gulp.watch(['./src/*.js'], ['scripts']);
   gulp.watch(['./src/*.html'], ['copy-html']);
+  gulp.watch(['./src/*.scss'], ['sass']);
 });
 
 // Default task for development - Called by 'gulp' on terminal
-gulp.task('default', ['scripts', 'copy-html', 'webserver', 'watch']);
+gulp.task('default', ['scripts', 'copy-html', 'sass', 'webserver', 'watch']);
 
 // Private Functions
 // ----------------------------------------------------------------------------
