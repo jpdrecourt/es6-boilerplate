@@ -14,9 +14,11 @@ var source = require('vinyl-source-stream'); // Allows to use normal text stream
 var babelify = require('babelify'); // Transpiler
 var webserver = require('gulp-webserver'); // Webserver with LiveReaload
 var sass = require('gulp-sass'); // SASS compiler
+var preprocess =require('gulp-preprocess'); // Preprocessing files
+var symlink = require('gulp-sym'); // Symlink in development
 var prefix = require('gulp-autoprefixer'); // Browser compatibility
-var htmlPages = ['src/*.html']; // HTML pages to watch
-var scssPages = ['src/*.scss']; // CSS pages to watch
+var htmlPages = ['src/**/*.html']; // HTML pages to watch
+var scssPages = ['src/**/*.scss']; // CSS pages to watch
 
 // External dependencies that don't need to be rebundled while developing
 // They'll be bundled once and for all in 'vendor.js'
@@ -34,9 +36,10 @@ gulp.task('scripts', function () {
   bundleApp(false);
 });
 // Copy HTML page in separate task to avoid recompiling JS
-gulp.task('copy-html', function () {
+gulp.task('copy-html', function() {
   gulp.src(htmlPages)
-    .pipe(gulp.dest('dev'));
+  .pipe(preprocess({context: {NODE_ENV: 'development'}}))
+  .pipe(gulp.dest('dev'));
 });
 // SASS, CSS and prefix
 gulp.task('sass', function () {
@@ -49,9 +52,13 @@ gulp.task('sass', function () {
       cascade: true }))
     .pipe(gulp.dest('dev/web/css'));
 });
-
+// Symlink to media for development
+gulp.task('assets', function() {
+  gulp.src('assets')
+    .pipe(symlink('dev/assets'));
+});
 // Webserver task for Development
-gulp.task('webserver', function () {
+gulp.task('webserver', ['scripts', 'copy-html', 'sass', 'assets'], function() {
   gulp.src('./dev/')
     .pipe(webserver({
         livereload: true,
@@ -72,15 +79,17 @@ gulp.task('deploy', function () {
       browsers: ['last 15 versions', '> 1%', 'ie 8', 'ie 7'],
       cascade: true }))
     .pipe(gulp.dest('dist/web/css'));
+  gulp.src(['./assets/**/*'])
+    .pipe(gulp.dest('./dist/assets'));
   bundleApp(true);
 });
 
 // Watch task - Reruns scripts task everytime something changes
 // Destination directory: dist
 gulp.task('watch', function () {
-  gulp.watch(['./src/*.js'], ['scripts']);
-  gulp.watch(['./src/*.html'], ['copy-html']);
-  gulp.watch(['./src/*.scss'], ['sass']);
+  gulp.watch(['./src/**/*.js'], ['scripts']);
+  gulp.watch(['./src/**/*.html'], ['copy-html']);
+  gulp.watch(['./src/**/*.scss'], ['sass']);
 });
 
 // Default task for development - Called by 'gulp' on terminal
