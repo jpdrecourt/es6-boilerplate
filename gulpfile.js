@@ -1,8 +1,8 @@
 /*
-* ES6 Boilerplate for project Automation
-* Inspired by Jean-Pierre Sierens.
-* Author: Jean-Philippe Drecourt
-*/
+ * ES6 Boilerplate for project Automation
+ * Inspired by Jean-Pierre Sierens.
+ * Author: Jean-Philippe Drecourt
+ */
 
 // Declarations & dependencies
 // ----------------------------------------------------------------------------
@@ -32,44 +32,49 @@ var scriptsCount = 0;
 //Gulp tasks
 // ----------------------------------------------------------------------------
 // Development task - Don't bundle the dependencies
-gulp.task('scripts', function () {
-  bundleApp(false);
+gulp.task('scripts', function() {
+  return bundleApp(false);
 });
 // Copy HTML page in separate task to avoid recompiling JS
 gulp.task('copy-html', function() {
-  gulp.src(htmlPages)
+  return gulp.src(htmlPages)
   .pipe(preprocess({context: {NODE_ENV: 'development'}}))
   .pipe(gulp.dest('dev'));
 });
 // SASS, CSS and prefix
-gulp.task('sass', function () {
+gulp.task('sass', function() {
   return gulp.src(scssPages)
     .pipe(sass({
       indentedSyntax: true
     }).on('error', sass.logError))
     .pipe(prefix({
       browsers: ['last 15 versions', '> 1%', 'ie 8', 'ie 7'],
-      cascade: true }))
+      cascade: true
+    }))
     .pipe(gulp.dest('dev/web/css'));
 });
 // Symlink to media for development
 gulp.task('assets', function() {
-  gulp.src('assets')
-    .pipe(symlink('dev/assets'));
+  fs.stat('./dev/assets', function(err) {
+    if (err !== null) {
+      return gulp.src('assets')
+      .pipe(symlink('dev/assets'));
+    }
+  });
 });
 // Webserver task for Development
 gulp.task('webserver', ['scripts', 'copy-html', 'sass', 'assets'], function() {
   gulp.src('./dev/')
     .pipe(webserver({
-        livereload: true,
-        open: true
+      livereload: true,
+      open: true
     }));
 });
 // Deployment task - Bundle everything into one script and copy HTML pages
 // Destination directory: ./dist
-// TODO: DRY this out
-gulp.task('deploy', function () {
+gulp.task('deploy', function() {
   gulp.src(htmlPages)
+    .pipe(preprocess({context: {NODE_ENV: 'production'}}))
     .pipe(gulp.dest('dist'));
   gulp.src(scssPages)
     .pipe(sass({
@@ -77,7 +82,8 @@ gulp.task('deploy', function () {
     }).on('error', sass.logError))
     .pipe(prefix({
       browsers: ['last 15 versions', '> 1%', 'ie 8', 'ie 7'],
-      cascade: true }))
+      cascade: true
+    }))
     .pipe(gulp.dest('dist/web/css'));
   gulp.src(['./assets/**/*'])
     .pipe(gulp.dest('./dist/assets'));
@@ -86,7 +92,7 @@ gulp.task('deploy', function () {
 
 // Watch task - Reruns scripts task everytime something changes
 // Destination directory: dist
-gulp.task('watch', function () {
+gulp.task('watch', function() {
   gulp.watch(['./src/**/*.js'], ['scripts']);
   gulp.watch(['./src/**/*.html'], ['copy-html']);
   gulp.watch(['./src/**/*.scss'], ['sass']);
@@ -114,9 +120,9 @@ function bundleApp(isProduction) {
   // If the file exists, then do not recreate it.
   if (!isProduction && scriptsCount === 1) {
     browserify({
-      require: dependencies,
-      debug: true
-    })
+        require: dependencies,
+        debug: true
+      })
       .bundle()
       .on('error', gutil.log)
       .pipe(source('vendors.js'))
@@ -126,22 +132,27 @@ function bundleApp(isProduction) {
     rootDir = './dist';
     // Copy all the HTML files there to ease copying
 
-  }
-  else
-  {
+  } else {
     rootDir = './dev';
     // Make the dependencies external to avoid bundling in bundle.js
     // Dependencies are bundled in vendor.js in development
-    dependencies.forEach(function (dep) {
+    dependencies.forEach(function(dep) {
       appBundler.external(dep);
     });
   }
 
-  appBundler
-    // Transform ES6 and JSX to ES5 with babelify
-    .transform('babelify', {presets: ['es2015']})
+  return appBundler
+  // Transform ES6 and JSX to ES5 with babelify
+    .transform('babelify', {
+      presets: ['es2015']
+    })
     .bundle()
     .on('error', gutil.log)
     .pipe(source('bundle.js'))
-    .pipe(gulp.dest(rootDir + '/web/js/'));
+    .pipe(gulp.dest(rootDir + '/web/js/'))
+    .on('finish', function () {
+      gulp.src(rootDir + '/web/js/bundle.js')
+        .pipe(preprocess({context: {NODE_ENV: isProduction ? 'production' : 'development'}}))
+        .pipe(gulp.dest(rootDir + '/web/js/'));
+    });
 }
