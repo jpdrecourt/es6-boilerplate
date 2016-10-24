@@ -55,10 +55,10 @@ gulp.task('sass', function() {
 });
 // Symlink to media for development
 gulp.task('assets', function() {
-  fs.stat('./dev/assets', function(err) {
+  fs.stat('./dev/web/assets', function(err) {
     if (err !== null) {
       return gulp.src('assets')
-      .pipe(symlink('dev/assets'));
+      .pipe(symlink('dev/web/assets'));
     }
   });
 });
@@ -86,7 +86,7 @@ gulp.task('deploy', function() {
     }))
     .pipe(gulp.dest('dist/web/css'));
   gulp.src(['./assets/**/*'])
-    .pipe(gulp.dest('./dist/assets'));
+    .pipe(gulp.dest('./dist/web/assets'));
   bundleApp(true);
 });
 
@@ -147,7 +147,9 @@ function bundleApp(isProduction) {
       presets: ['es2015']
     })
     .bundle()
-    .on('error', gutil.log)
+    .on('error', function (error) {
+      gutil.log(error);
+      this.emit('end');})
     .pipe(source('bundle.js'))
     .pipe(gulp.dest(rootDir + '/web/js/'))
     .on('finish', function () {
