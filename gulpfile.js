@@ -93,7 +93,7 @@ gulp.task('deploy', function() {
 // Watch task - Reruns scripts task everytime something changes
 // Destination directory: dist
 gulp.task('watch', function() {
-  gulp.watch(['./src/**/*.js'], ['scripts']);
+  gulp.watch(['./src/**/*.js', './src/**/*.json'], ['scripts']);
   gulp.watch(['./src/**/*.html'], ['copy-html']);
   gulp.watch(['./src/**/*.scss'], ['sass']);
 });
